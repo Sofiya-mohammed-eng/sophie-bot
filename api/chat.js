@@ -1,6 +1,6 @@
 // Ask Sophie: chatbot API for Sofiya's portfolio.
 // One file, no dependencies. Runs as a Vercel serverless function (Node 18+).
-// The Gemini API key lives only in the server environment (GEMINI_API_KEY).
+// The API key lives only in the server environment (GROQ_API_KEY or GEMINI_API_KEY).
  
 // ---------- 1. KNOWLEDGE: edit this to change what Sophie knows ----------
 const CONTENT = `
@@ -65,7 +65,7 @@ ${CONTENT}`;
 const API_KEY = process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || '';
 const PROVIDER = API_KEY.startsWith('gsk_') ? 'groq' : 'gemini';
 const MODEL = PROVIDER === 'groq'
-  ? (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile')
+  ? (process.env.GROQ_MODEL || 'openai/gpt-oss-120b')
   : (process.env.GEMINI_MODEL || 'gemini-2.5-flash');
 const MAX_MESSAGES = 20;
 const MAX_CHARS = 500;
@@ -171,7 +171,9 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           model: MODEL,
           temperature: 0.4,
-          max_tokens: 700,
+          max_tokens: 1500,
+          // gpt-oss models think before answering; keep it short so replies are fast and never empty
+          ...(MODEL.includes('gpt-oss') ? { reasoning_effort: 'low' } : {}),
           messages: [{ role: 'system', content: SYSTEM }, ...recent.map((m) => ({ role: m.role, content: m.content }))],
         }),
       });
@@ -209,4 +211,3 @@ module.exports = async function handler(req, res) {
     return send(res, 502, { error: 'model_error' });
   }
 };
- 
